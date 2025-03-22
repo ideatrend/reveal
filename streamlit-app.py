@@ -56,6 +56,7 @@ def mouse_reveal_component(image_base64, image_type):
                 -webkit-mask-image: radial-gradient(circle at center, transparent 0, black 80px);
                 pointer-events: none;
                 z-index: 10;
+                transition: opacity 0.3s ease;
             }}
             
             body {{
@@ -63,12 +64,29 @@ def mouse_reveal_component(image_base64, image_type):
                 padding: 0;
                 overflow: hidden;
             }}
+            
+            .status-indicator {{
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background-color: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 5px;
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                z-index: 20;
+                pointer-events: none;
+                transition: opacity 0.5s ease;
+                opacity: 0;
+            }}
         </style>
     </head>
     <body>
         <div id="parallaxContainer" class="parallax-container">
             <div id="parallaxImage" class="parallax-image"></div>
             <div id="imageMask" class="image-mask"></div>
+            <div id="statusIndicator" class="status-indicator">Full Image View</div>
         </div>
         
         <script>
@@ -84,8 +102,9 @@ def mouse_reveal_component(image_base64, image_type):
                 const parallaxImage = document.getElementById('parallaxImage');
                 const container = document.getElementById('parallaxContainer');
                 const imageMask = document.getElementById('imageMask');
+                const statusIndicator = document.getElementById('statusIndicator');
                 
-                if (!container || !parallaxImage || !imageMask) {{
+                if (!container || !parallaxImage || !imageMask || !statusIndicator) {{
                     console.log("DOM elements not found, will retry...");
                     setTimeout(setupMouseEffect, 100);
                     return;
@@ -105,8 +124,71 @@ def mouse_reveal_component(image_base64, image_type):
                 let mouseAbsX = 0;
                 let mouseAbsY = 0;
                 
+                // Flag to track if we're in full image view mode
+                let fullImageView = false;
+                
+                // Status indicator timeout
+                let statusTimeout = null;
+                
+                // Right click handler for full image view
+                container.addEventListener('contextmenu', function(e) {{
+                    e.preventDefault(); // Prevent default context menu
+                    
+                    // Toggle to full image view
+                    fullImageView = true;
+                    
+                    // Hide the mask to show full image
+                    imageMask.style.opacity = '0';
+                    
+                    // Reset transform for flat view
+                    parallaxImage.style.transform = 'none';
+                    parallaxImage.style.boxShadow = 'none';
+                    
+                    // Show status indicator
+                    statusIndicator.textContent = "Full Image View (Left click to return)";
+                    statusIndicator.style.opacity = '1';
+                    
+                    // Hide status after delay
+                    clearTimeout(statusTimeout);
+                    statusTimeout = setTimeout(() => {{
+                        statusIndicator.style.opacity = '0';
+                    }}, 2000);
+                }});
+                
+                // Left click handler to return to reveal mode
+                container.addEventListener('click', function(e) {{
+                    if (fullImageView) {{
+                        // Toggle back to reveal mode
+                        fullImageView = false;
+                        
+                        // Show the mask again
+                        imageMask.style.opacity = '1';
+                        
+                        // Update mask and transform for current mouse position
+                        const rect = container.getBoundingClientRect();
+                        mouseAbsX = e.clientX - rect.left;
+                        mouseAbsY = e.clientY - rect.top;
+                        mouseX = ((mouseAbsX) / rect.width - 0.5) * 2;
+                        mouseY = ((mouseAbsY) / rect.height - 0.5) * 2;
+                        
+                        updateMask(mouseAbsX, mouseAbsY);
+                        updateTransform();
+                        
+                        // Show status indicator
+                        statusIndicator.textContent = "3D Reveal Mode";
+                        statusIndicator.style.opacity = '1';
+                        
+                        // Hide status after delay
+                        clearTimeout(statusTimeout);
+                        statusTimeout = setTimeout(() => {{
+                            statusIndicator.style.opacity = '0';
+                        }}, 2000);
+                    }}
+                }});
+                
                 container.addEventListener('mousemove', function(e) {{
-                    console.log("Mouse moved in container");
+                    // Skip effect processing if in full image view
+                    if (fullImageView) return;
                     
                     // Get container dimensions
                     const rect = container.getBoundingClientRect();
@@ -127,7 +209,8 @@ def mouse_reveal_component(image_base64, image_type):
                 }});
                 
                 container.addEventListener('mouseleave', function() {{
-                    console.log("Mouse left container");
+                    // Skip if in full image view
+                    if (fullImageView) return;
                     
                     // Reset when mouse leaves
                     mouseX = 0;
@@ -195,18 +278,19 @@ if uploaded_file is not None:
     html_component = mouse_reveal_component(base64_img, file_type)
     html(html_component, height=1400)  # 높이 증가 (2배로)
     
-    st.info("👆 Move your mouse over the black area above to reveal parts of the image with an enhanced 3D effect.")
+    st.info("👆 Move your mouse over the black area to reveal parts of the image with an enhanced 3D effect. Right-click to view the full image, left-click to return to 3D reveal mode.")
 else:
     # Display placeholder
     st.info("👆 Please upload an image to see the effect.")
 
 # Additional instructions
 st.markdown("""
-### How it works
+### How to Use
 
 1. Upload your image using the file uploader above
-2. Move your mouse over the black area to reveal parts of the image
-3. Notice the enhanced 3D effect as the image shifts with depth and perspective
+2. Move your mouse over the black area to reveal parts of the image in 3D
+3. **Right-click** anywhere to view the full image
+4. **Left-click** to return to the 3D reveal mode
 """)
 
 # Display technical details in expander
@@ -217,6 +301,7 @@ with st.expander("Technical Details"):
     - **CSS Masks**: To reveal only the portion of the image near your mouse cursor
     - **Enhanced 3D Transforms**: Using perspective, rotation, and Z-axis translation for a stronger depth effect
     - **Dynamic Shadows**: Shadows that change based on mouse movement to enhance the 3D appearance
+    - **Toggle Modes**: Right-click to view the full image, left-click to return to 3D reveal mode
     - **Streamlit Components**: To embed the custom HTML and JavaScript in a Streamlit app
     
     The effect combines multiple transformations:
