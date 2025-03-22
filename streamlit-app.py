@@ -24,7 +24,7 @@ def mouse_reveal_component(image_base64, image_type):
             .parallax-container {{
                 position: relative;
                 width: 100%;
-                height: 70vh;
+                height: 140vh; /* 2배로 늘린 높이 */
                 overflow: hidden;
                 border-radius: 10px;
                 background-color: #000;
@@ -33,15 +33,16 @@ def mouse_reveal_component(image_base64, image_type):
             
             .parallax-image {{
                 position: absolute;
-                width: 100%;
-                height: 100%;
+                width: 110%;
+                height: 110%;
                 background-image: url('data:image/{image_type};base64,{image_base64}');
                 background-size: cover;
                 background-position: center;
                 transform-style: preserve-3d;
-                transition: transform 0.1s ease-out;
-                top: 0;
-                left: 0;
+                transition: transform 0.15s ease-out;
+                top: -5%;
+                left: -5%;
+                box-shadow: 0 0 40px rgba(0,0,0,0.8);
             }}
             
             .image-mask {{
@@ -92,11 +93,11 @@ def mouse_reveal_component(image_base64, image_type):
                 
                 console.log("Mouse effect setup initialized");
                 
-                // Maximum rotation amount (in degrees)
-                const maxRotation = 10;
+                // Maximum rotation amount (in degrees) - 강렬한 3D 효과를 위해 값 증가
+                const maxRotation = 25;
                 
                 // Reveal radius (in pixels)
-                const revealRadius = 100;
+                const revealRadius = 150;
                 
                 // Track mouse position
                 let mouseX = 0;
@@ -141,24 +142,34 @@ def mouse_reveal_component(image_base64, image_type):
                 }});
                 
                 function updateMask(x, y) {{
-                    // Update mask to reveal image only around mouse position
-                    const maskImage = `radial-gradient(circle ${{revealRadius}}px at ${{x}}px ${{y}}px, transparent 0%, black 100%)`;
+                    // 더 선명한 경계를 위한 마스크 그라데이션 조정
+                    const maskImage = `radial-gradient(circle ${{revealRadius}}px at ${{x}}px ${{y}}px, transparent 0%, rgba(0,0,0,0.3) 70%, black 100%)`;
                     imageMask.style.maskImage = maskImage;
                     imageMask.style.webkitMaskImage = maskImage;
                 }}
                 
                 function updateTransform() {{
-                    // Calculate rotation values
+                    // Calculate rotation values - 더 강한 회전 효과
                     const rotateY = mouseX * maxRotation;
-                    const rotateX = -mouseY * maxRotation; // Negative because we want to tilt away from mouse
+                    const rotateX = -mouseY * maxRotation;
                     
-                    // Calculate translation values (parallax effect)
-                    const translateX = mouseX * 20; // px
-                    const translateY = mouseY * 20; // px
+                    // 더 극적인 Z축 변환과 원근감을 위한 값 증가
+                    const translateX = mouseX * 40; // 증가된 X축 이동
+                    const translateY = mouseY * 40; // 증가된 Y축 이동
+                    const translateZ = 50 - Math.abs(mouseX * mouseY) * 30; // Z축 변환 추가
                     
-                    // Apply transform
+                    // 조명 효과를 위한 그림자 조정
+                    const shadowX = -mouseX * 20;
+                    const shadowY = -mouseY * 20;
+                    const shadowBlur = 30 + Math.abs(mouseX * mouseY) * 20;
+                    const shadowOpacity = 0.5 + Math.abs(mouseX * mouseY) * 0.3;
+                    
+                    // 그림자 효과 적용
+                    parallaxImage.style.boxShadow = `${{shadowX}}px ${{shadowY}}px ${{shadowBlur}}px rgba(0,0,0,${{shadowOpacity}})`;
+                    
+                    // 향상된 3D 변환 적용
                     parallaxImage.style.transform = 
-                        `rotateX(${{rotateX}}deg) rotateY(${{rotateY}}deg) translate(${{translateX}}px, ${{translateY}}px)`;
+                        `perspective(1000px) rotateX(${{rotateX}}deg) rotateY(${{rotateY}}deg) translateX(${{translateX}}px) translateY(${{translateY}}px) translateZ(${{translateZ}}px)`;
                 }}
                 
                 // Initialize mask
@@ -182,16 +193,12 @@ if uploaded_file is not None:
     
     # Display component with uploaded image
     html_component = mouse_reveal_component(base64_img, file_type)
-    html(html_component, height=700)
+    html(html_component, height=1400)  # 높이 증가 (2배로)
     
-    st.info("👆 Move your mouse over the black area above to reveal parts of the image with a 3D effect.")
+    st.info("👆 Move your mouse over the black area above to reveal parts of the image with an enhanced 3D effect.")
 else:
     # Display placeholder
     st.info("👆 Please upload an image to see the effect.")
-    
-    # You could also show demo image
-    # html_component = mouse_reveal_component("demo_base64_string", "jpeg")
-    # html(html_component, height=700)
 
 # Additional instructions
 st.markdown("""
@@ -199,19 +206,22 @@ st.markdown("""
 
 1. Upload your image using the file uploader above
 2. Move your mouse over the black area to reveal parts of the image
-3. Notice the 3D effect as the image shifts with your mouse movement
+3. Notice the enhanced 3D effect as the image shifts with depth and perspective
 """)
 
 # Display technical details in expander
 with st.expander("Technical Details"):
     st.markdown("""
-    This app uses a combination of:
+    This app uses several advanced techniques:
     
     - **CSS Masks**: To reveal only the portion of the image near your mouse cursor
-    - **3D Transforms**: To create a parallax effect that gives depth as you move the mouse
+    - **Enhanced 3D Transforms**: Using perspective, rotation, and Z-axis translation for a stronger depth effect
+    - **Dynamic Shadows**: Shadows that change based on mouse movement to enhance the 3D appearance
     - **Streamlit Components**: To embed the custom HTML and JavaScript in a Streamlit app
     
-    The effect works by tracking your mouse position and:
-    1. Creating a radial gradient mask that only shows the image in a circle around your cursor
-    2. Applying a 3D transform to the image based on mouse position
+    The effect combines multiple transformations:
+    1. A radial gradient mask reveals the image only around your cursor
+    2. X and Y axis rotations tilt the image based on cursor position
+    3. Z-axis translation creates a "popping out" effect as if the image is emerging from the screen
+    4. Dynamic shadows reinforce the 3D illusion by simulating lighting
     """)
